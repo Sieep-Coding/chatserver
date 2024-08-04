@@ -6,10 +6,10 @@ import (
 )
 
 const Port = "8000"
-const StreamerMode = true
+const SafeMode = true
 
-func safeRemoteAddr(conn net.Conn) {
-	if StreamerMode {
+func safeRemoteAddr(conn net.Conn) string {
+	if SafeMode {
 		return "[REDACTED]"
 	} else {
 		return conn.RemoteAddr().String()
