@@ -9,7 +9,7 @@ const Port = "8000"
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
-	message := []byte("Hello World")
+	message := []byte("Hello World\n")
 	a, err := conn.Write(message)
 	if err != nil {
 		log.Printf("Could not write message to %s: %s\n", conn.RemoteAddr(), err) // log address connecting to server
@@ -33,6 +33,7 @@ func main() {
 			log.Printf("ERROR: Could not accept connection: %s\n", err)
 			// handle error
 		}
+		log.Printf("Accepted Connection from %s\n", conn.RemoteAddr())
 		go handleConnection(conn)
 	}
 
