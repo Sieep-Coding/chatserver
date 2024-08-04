@@ -22,7 +22,6 @@ func handleConnection(conn net.Conn) {
 }
 
 func main() {
-
 	ln, err := net.Listen("tcp", ":"+Port)
 	if err != nil {
 		log.Fatalf("Could not listen to port: %s\n", Port, err)
