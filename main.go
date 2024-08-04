@@ -6,13 +6,22 @@ import (
 )
 
 const Port = "8000"
+const StreamerMode = true
+
+func safeRemoteAddr(conn net.Conn) {
+	if StreamerMode {
+		return "[REDACTED]"
+	} else {
+		return conn.RemoteAddr().String()
+	}
+}
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 	message := []byte("Hello World\n")
 	a, err := conn.Write(message)
 	if err != nil {
-		log.Printf("Could not write message to %s: %s\n", conn.RemoteAddr(), err) // log address connecting to server
+		log.Printf("Could not write message to %s: %s\n", safeRemoteAddr(conn), err) // log address connecting to server
 		return
 	}
 	if a < len(message) {
@@ -33,7 +42,7 @@ func main() {
 			log.Printf("ERROR: Could not accept connection: %s\n", err)
 			// handle error
 		}
-		log.Printf("Accepted Connection from %s\n", conn.RemoteAddr())
+		log.Printf("Accepted Connection from %s\n", safeRemoteAddr(conn))
 		go handleConnection(conn)
 	}
 
