@@ -16,6 +16,38 @@ func safeRemoteAddr(conn net.Conn) string {
 	}
 }
 
+type MessageType int
+
+const (
+	ClientConnected MessageType = iota + 1
+	NewMessage
+)
+
+type Message struct {
+	Type MessageType
+	Conn net.Conn
+	Text string
+}
+
+func server(messages chan Message) {
+	conns := []net.Conn{}
+	for {
+		msg := <-messages
+		switch msg.Type {
+		case ClientConnected:
+			conns = append(conns, msg.Conn)
+		case NewMessage:
+			for _, conn := range conns {
+				_, err := conn.Write([]byte(msg.Text))
+				if err != nil {
+					//TODO: Remove connection from list
+					log.Println("Could not send data to %s: %s", safeRemoteAddr(conn), err)
+				}
+			}
+		}
+	}
+}
+
 func handleConnection(conn net.Conn, outgoing chan string) {
 	defer conn.Close()
 	message := []byte("Hello World\n")
@@ -49,7 +81,6 @@ func main() {
 		conn, err := ln.Accept()
 		if err != nil {
 			log.Printf("ERROR: Could not accept connection: %s\n", err)
-			// handle error
 		}
 		log.Printf("Accepted Connection from %s\n", safeRemoteAddr(conn))
 		outgoing := make(chan string)
