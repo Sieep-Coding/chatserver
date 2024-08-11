@@ -6,7 +6,7 @@ import (
 	"net"
 )
 
-const SafeMode = true
+const SafeMode = false
 const Port = "8000"
 
 func safeRemoteAddr(conn net.Conn) string {
@@ -21,7 +21,7 @@ type MessageType int
 
 const (
 	ClientConnected MessageType = iota + 1
-	DeleteClient
+	ClientDisconnected
 	NewMessage
 )
 
@@ -37,15 +37,20 @@ func server(messages chan Message) {
 		msg := <-messages
 		switch msg.Type {
 		case ClientConnected:
+			log.Printf("Client %s connected\n", safeRemoteAddr(msg.Conn))
 			conns[msg.Conn.RemoteAddr().String()] = msg.Conn
-		case DeleteClient:
+		case ClientDisconnected:
+			log.Printf("Client %s disconnected\n", safeRemoteAddr(msg.Conn))
 			delete(conns, msg.Conn.RemoteAddr().String())
 		case NewMessage:
+			log.Printf("Client %s sent message %s\n", safeRemoteAddr(msg.Conn), msg.Text)
 			for _, conn := range conns {
-				_, err := conn.Write([]byte(msg.Text))
-				if err != nil {
-					//TODO: Remove connection from list
-					log.Println("Could not send data to %s: %s", safeRemoteAddr(conn), err)
+				if conn.RemoteAddr().String() != msg.Conn.RemoteAddr().String() {
+					_, err := conn.Write([]byte(msg.Text))
+					if err != nil {
+						//TODO: Remove connection from list
+						log.Println("Could not send data to %s: %s", safeRemoteAddr(conn), err)
+					}
 				}
 			}
 		}
@@ -70,7 +75,7 @@ func client(conn net.Conn, messages chan Message) {
 		if err != nil {
 			conn.Close()
 			messages <- Message{
-				Type: DeleteClient,
+				Type: ClientDisconnected,
 				Conn: conn,
 			}
 			return
