@@ -1,12 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 )
 
-const Port = "8000"
 const SafeMode = true
+const Port = "8000"
 
 func safeRemoteAddr(conn net.Conn) string {
 	if SafeMode {
@@ -20,6 +21,7 @@ type MessageType int
 
 const (
 	ClientConnected MessageType = iota + 1
+	DeleteClient
 	NewMessage
 )
 
@@ -30,12 +32,14 @@ type Message struct {
 }
 
 func server(messages chan Message) {
-	conns := []net.Conn{}
+	conns := map[string]net.Conn{}
 	for {
 		msg := <-messages
 		switch msg.Type {
 		case ClientConnected:
-			conns = append(conns, msg.Conn)
+			conns[msg.Conn.RemoteAddr().String()] = msg.Conn
+		case DeleteClient:
+			delete(conns, msg.Conn.RemoteAddr().String())
 		case NewMessage:
 			for _, conn := range conns {
 				_, err := conn.Write([]byte(msg.Text))
@@ -48,7 +52,7 @@ func server(messages chan Message) {
 	}
 }
 
-func handleConnection(conn net.Conn, outgoing chan string) {
+func client(conn net.Conn, messages chan Message) {
 	defer conn.Close()
 	message := []byte("Hello World\n")
 	a, err := conn.Write(message)
@@ -65,9 +69,17 @@ func handleConnection(conn net.Conn, outgoing chan string) {
 		a, err := conn.Read(buffer)
 		if err != nil {
 			conn.Close()
+			messages <- Message{
+				Type: DeleteClient,
+				Conn: conn,
+			}
 			return
 		}
-		outgoing <- string(buffer[0:a])
+		messages <- Message{
+			Type: NewMessage,
+			Text: string(buffer[0:a]),
+			Conn: conn,
+		}
 	}
 }
 
@@ -77,14 +89,18 @@ func main() {
 		log.Fatalf("Could not listen to port: %s\n", Port, err)
 	}
 	log.Printf("Listening to TCP connections on port %s ...\n", Port)
+	messages := make(chan Message)
+	go server(messages)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			log.Printf("ERROR: Could not accept connection: %s\n", err)
 		}
-		log.Printf("Accepted Connection from %s\n", safeRemoteAddr(conn))
-		outgoing := make(chan string)
-		go handleConnection(conn, outgoing)
+		fmt.Printf("Accepted Connection from %s\n", safeRemoteAddr(conn))
+		messages <- Message{
+			Type: ClientConnected,
+			Conn: conn,
+		}
+		go client(conn, messages)
 	}
-
 }
