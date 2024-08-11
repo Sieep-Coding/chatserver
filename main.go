@@ -16,7 +16,7 @@ func safeRemoteAddr(conn net.Conn) string {
 	}
 }
 
-func handleConnection(conn net.Conn) {
+func handleConnection(conn net.Conn, outgoing chan string) {
 	defer conn.Close()
 	message := []byte("Hello World\n")
 	a, err := conn.Write(message)
@@ -27,6 +27,15 @@ func handleConnection(conn net.Conn) {
 	if a < len(message) {
 		log.Printf("The message was not fully written %d/%d\n", len(message))
 		return
+	}
+	buffer := make([]byte, 512)
+	for {
+		a, err := conn.Read(buffer)
+		if err != nil {
+			conn.Close()
+			return
+		}
+		outgoing <- string(buffer[0:a])
 	}
 }
 
@@ -43,7 +52,8 @@ func main() {
 			// handle error
 		}
 		log.Printf("Accepted Connection from %s\n", safeRemoteAddr(conn))
-		go handleConnection(conn)
+		outgoing := make(chan string)
+		go handleConnection(conn, outgoing)
 	}
 
 }
