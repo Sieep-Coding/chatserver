@@ -1,8 +1,6 @@
 # chat server
 A single file chat server written in Go.
 
-You should watch it if you are learning Go :)
-
 Works on a TPS server.
 
 ## Guide
