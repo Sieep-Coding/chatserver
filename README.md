@@ -1,6 +1,14 @@
 # chat server
-A single file chat server written in Go, following tsoding [video.](https://www.youtube.com/watch?v=qmmQAAJzM54&t=899s&ab_channel=TsodingDaily)
+A single file chat server written in Go.
 
 You should watch it if you are learning Go :)
 
 Works on a TPS server.
+
+## Guide
+
+Telnet linux command uses TCP connection, so that is how we will connect to our chat server.
+
+`telnet [IP Address]:[Port]`
+
+To close telnet, type `^]`
